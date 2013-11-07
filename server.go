@@ -28,17 +28,17 @@ type TestResponse struct {
 	Header http.Header
 }
 
-type TestHandler struct {
+type Handler struct {
 	Requests  []TestRequest
 	CallCount int
 	T         *testing.T
 }
 
-func (h *TestHandler) AllRequestsCalled() bool {
+func (h *Handler) AllRequestsCalled() bool {
 	return h.CallCount == len(h.Requests)
 }
 
-func (h *TestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(h.Requests) <= h.CallCount {
 		h.logError("Index out of range! Test server called too many times. Final Request:", r.Method, r.RequestURI)
 		return
@@ -96,8 +96,17 @@ func (h *TestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, tester.Response.Body)
 }
 
-func NewTLSServer(t *testing.T, requests []TestRequest) (s *httptest.Server, h *TestHandler) {
-	h = &TestHandler{
+func NewServer(t *testing.T, requests []TestRequest) (s *httptest.Server, h *Handler) {
+	h = &Handler{
+		Requests: requests,
+		T:        t,
+	}
+	s = httptest.NewServer(h)
+	return
+}
+
+func NewTLSServer(t *testing.T, requests []TestRequest) (s *httptest.Server, h *Handler) {
+	h = &Handler{
 		Requests: requests,
 		T:        t,
 	}
@@ -105,7 +114,7 @@ func NewTLSServer(t *testing.T, requests []TestRequest) (s *httptest.Server, h *
 	return
 }
 
-func (h *TestHandler) logError(msg string, args ...interface{}) {
+func (h *Handler) logError(msg string, args ...interface{}) {
 	h.T.Logf(msg, args...)
 	h.T.Fail()
 }
